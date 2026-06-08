@@ -23,7 +23,6 @@ def keep_alive():
 
 # --- 📁 DATABASE HELPER FUNCTIONS (JSON ဖြင့် အမြဲတမ်းသိမ်းဆည်းမည့် စနစ်) ---
 def load_config():
-    # ဖိုင်မရှိသေးပါက Auto ဆောက်ပေးမည်
     if not os.path.exists('config.json'):
         default_config = {
             "TOKEN": "8724005419:AAH2HPdjlJ2ZcdzkLdMpcJWEaDuQhWg4ls4",
@@ -68,7 +67,6 @@ ADMIN_LIST = config["ADMIN_LIST"]
 bot = telebot.TeleBot(TOKEN)
 BOT_USERNAME = None
 
-# JSON ဖိုင်များထဲမှ ဒေတာများကို Variable များထဲသို့ ဆွဲဖတ်ခြင်း
 USER_DATABASE = load_users()
 VPN_LINKS = load_links()
 
@@ -79,7 +77,7 @@ V2BOX_PACKAGES = {
     "100gb": 90
 }
 
-# --- ⌨️ KEYBOARDS (သင့်ပုံပါအတိုင်း ခလုတ်အသစ်များ ဖြည့်စွက်ထားသည်) ---
+# --- ⌨️ KEYBOARDS ---
 def get_main_inline_keyboard():
     inline_markup = InlineKeyboardMarkup(row_width=2)
     btn_user_info = InlineKeyboardButton('👤 User Info', callback_data='user_info')
@@ -118,13 +116,13 @@ def check_and_create_user(message_or_id, name="Unknown", username="None"):
         USER_DATABASE[chat_id] = {
             "name": name,
             "username": username,
-            "registered": False,   # Register အခြေအနေ
+            "registered": False,   
             "coins": 0,
             "purchased_vpns": [], 
             "used_gb_total": 0,    
             "referred_users": 0
         }
-        save_users() # Auto-Save to JSON
+        save_users() 
     else:
         if not isinstance(message_or_id, int):
             USER_DATABASE[chat_id]["name"] = name
@@ -146,7 +144,7 @@ def send_welcome(message):
                 check_and_create_user(referrer_id)
                 USER_DATABASE[referrer_id]["coins"] += 1
                 USER_DATABASE[referrer_id]["referred_users"] += 1
-                save_users() # Refer Coin တိုးသည်ကို သိမ်းဆည်းခြင်း
+                save_users() 
                 try:
                     bot.send_message(referrer_id, f"🎉 အဖွဲ့ဝင်သစ်တစ်ဦး သင့် Link မှတစ်ဆင့် ဆက်သွယ်ဝင်ရောက်လာသဖြင့် သင့်ထံ **+1 Coin** ထည့်သွင်းပေးလိုက်ပါပြီ။", parse_mode='Markdown')
                 except: pass
@@ -157,6 +155,10 @@ def send_welcome(message):
     
     welcome_text = "✨ Premium VPN Bot မှ ကြိုဆိုပါတယ်ဗျာ။\nအောက်ပါ ခလုတ်များကို အသုံးပြုနိုင်ပါတယ်-"
     bot.send_message(message.chat.id, welcome_text, reply_markup=reply_markup)
+    bot.send_message(message.chat.id, "👉 လိုအပ်ရာ လုပ်ဆောင်ချက်ကို နှိပ်ပါ -", reply_markup=get_main_inline_keyboard())
+
+@bot.message_handler(commands=['help'])
+def help_command(message):
     bot.send_message(message.chat.id, "👉 လိုအပ်ရာ လုပ်ဆောင်ချက်ကို နှိပ်ပါ -", reply_markup=get_main_inline_keyboard())
 
 @bot.message_handler(func=lambda message: message.text == '📖 VPN အသုံးပြုနည်း')
@@ -197,7 +199,7 @@ def admin_coin_add(message):
         if amount <= 0: return
         if target_id not in USER_DATABASE: check_and_create_user(target_id)
         USER_DATABASE[target_id]["coins"] += amount
-        save_users() # Auto-Save
+        save_users() 
         current_coins = USER_DATABASE[target_id]["coins"]
         bot.send_message(message.chat.id, f"✅ Chat ID: `{target_id}` ထံသို့ **+{amount} Coins** ထည့်ပြီးပါပြီ။\n📊 စုစုပေါင်း: {current_coins} Coins")
         try:
@@ -218,7 +220,7 @@ def admin_coin_delete(message):
             USER_DATABASE[target_id]["coins"] = 0
         else:
             USER_DATABASE[target_id]["coins"] -= amount
-        save_users() # Auto-Save
+        save_users() 
         current_coins = USER_DATABASE[target_id]["coins"]
         bot.send_message(message.chat.id, f"✅ Chat ID: `{target_id}` ထံမှ **-{amount} Coins** နှုတ်ပြီးပါပြီ။\n📊 လက်ရှိကျန်ရှိ Coin: {current_coins} Coins")
     except ValueError: pass
@@ -232,7 +234,7 @@ def admin_add_new_admin(message):
         new_admin_id = int(args[1])
         if new_admin_id not in ADMIN_LIST:
             ADMIN_LIST.append(new_admin_id)
-            save_config() # Config ထဲသို့ အမြဲတမ်းသိမ်းဆည်းခြင်း
+            save_config() 
             bot.send_message(message.chat.id, f"✅ Chat ID: `{new_admin_id}` အား Admin အဖြစ် အောင်မြင်စွာ ခန့်အပ်ပြီးပါပြီ။")
     except ValueError: pass
 
@@ -247,7 +249,7 @@ def admin_delete_vpn_link(message):
         for item in VPN_LINKS[gb_key]:
             if item['link'] == target_link:
                 VPN_LINKS[gb_key].remove(item)
-                save_links() # Auto-Save
+                save_links() 
                 bot.send_message(message.chat.id, f"✅ {gb_key.upper()} ထဲမှ VPN Link အား ဖျက်ပြီးပါပြီ။")
                 return
 
@@ -275,7 +277,7 @@ def admin_add_vpn_links(message):
         
     for l in incoming_links:
         VPN_LINKS[gb_key].append({"link": l, "used": False, "buyer_id": None})
-    save_links() # Auto-Save to JSON
+    save_links() 
     bot.send_message(message.chat.id, f"✅ {gb_key.upper()} သို့ လင့်ခ် {len(incoming_links)} ခု ထည့်ပြီးပါပြီ။")
 
 @bot.message_handler(commands=['gbl'])
@@ -302,10 +304,9 @@ def admin_broadcast_message(message):
         except: pass
     bot.send_message(message.chat.id, f"📢 Broadcast ပို့ဆောင်မှု ပြီးဆုံးပါပြီ။\n🟢 အောင်မြင်ဦးရေ: {success_count}")
 
-# --- 🔄 CALLBACK QUERY LISTENERS (USER INTERFACES) ---
+# --- 🔄 CALLBACK QUERY LISTENERS ---
 @bot.callback_query_handler(func=lambda call: True)
 def callback_listener(call):
-    bot.answer_callback_query(call.id)
     chat_id = call.message.chat.id
     check_and_create_user(call.message)
     
@@ -337,7 +338,7 @@ def callback_listener(call):
             reg_text = "✅ သင့်အကောင့်သည် မှတ်ပုံတင်ခြင်း (Register) အောင်မြင်စွာ ပြုလုပ်ပြီးသား ဖြစ်ပါတယ်ဗျာ။"
         else:
             user_data["registered"] = True
-            save_users() # အခြေအနေအား ဒေတာဘေ့စ်ထဲသိမ်းမည်
+            save_users() 
             reg_text = "📝 **Register Success!**\n\nသင့်အကောင့်ကို စနစ်တကျ မှတ်ပုံတင်ပေးလိုက်ပါပြီ။ ယခုမှစ၍ VPN သော့ချက်များကို စိတ်ချစွာ ထုတ်ယူနိုင်ပါပြီဗျာ။"
             
         back_markup = InlineKeyboardMarkup()
@@ -373,9 +374,11 @@ def callback_listener(call):
         bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text="🚀 ဝယ်ယူလိုသော Package ပမာဏကို ရွေးချယ်ပါ-", reply_markup=get_v2box_inline_keyboard())
 
     elif call.data == 'back_to_vpn_types':
-        callback_listener(telebot.types.CallbackQuery(call.id, call.from_user, call.message, 'gen_key'))
+        vpn_type_markup = InlineKeyboardMarkup(row_width=1)
+        vpn_type_markup.add(InlineKeyboardButton('🚀 V2BOX VPN', callback_data='v2box_menu'), InlineKeyboardButton('🔙 Back', callback_data='back_to_main'))
+        bot.edit_message_text(chat_id=chat_id, message_id=call.message.message_id, text="🔑 **Generate Key (Key ထုတ်ယူခြင်း)**\n\nအသုံးပြုလိုသော VPN Type ကို ရွေးချယ်ပေးပါ-", reply_markup=vpn_type_markup)
 
-    # 5. 📊 MY KEYS (ဝယ်ယူခဲ့ဖူးသော Key ရာဇဝင်)
+    # 5. 📊 MY KEYS
     elif call.data == 'my_keys':
         user_data = USER_DATABASE[chat_id]
         vpns = user_data.get("purchased_vpns", [])
@@ -435,11 +438,13 @@ def callback_listener(call):
         
         if user_data["coins"] < coin_needed:
             bot.send_message(chat_id, f"❌ ဝယ်ယူရန် Coin မလုံလောက်ပါ။ {selected_package.upper()} အတွက် {coin_needed} Coins လိုအပ်သော်လည်း သင့်တွင် {user_data['coins']} Coins သာ ရှိပါသည်။")
+            bot.answer_callback_query(call.id)
             return
             
         available_links = [l for l in VPN_LINKS.get(selected_package, []) if not l['used']]
         if not available_links:
             bot.send_message(chat_id, f"❌ စိတ်မကောင်းပါဘူးဗျာ၊ လောလောဆယ် {selected_package.upper()} အတွက် VPN Link လက်ကျန် ပြတ်လပ်နေပါသည်။")
+            bot.answer_callback_query(call.id)
             return
             
         chosen_item = available_links[0]
@@ -459,7 +464,6 @@ def callback_listener(call):
             "link": chosen_item['link']
         })
         
-        # အချက်အလက်များအားလုံး JSON ထဲသို့ ချက်ချင်းသိမ်းဆည်းခြင်း
         save_users()
         save_links()
         
@@ -475,17 +479,22 @@ def callback_listener(call):
         )
         bot.send_message(chat_id, success_text, parse_mode='Markdown')
         
-        # Admin များထံ Notification ပို့ခြင်း
         for admin_id in ADMIN_LIST:
             try:
                 bot.send_message(admin_id, f"🔔 **Notification:** User `{user_data['name']}` (ID: `{chat_id}`) သည် V2BOX {selected_package.upper()} အား ဝယ်ယူသွားခဲ့ပြီး Stock လျော့နည်းသွားပါပြီ။")
             except: pass
+
+    bot.answer_callback_query(call.id)
 
 # --- START BOT ENGINE ---
 print("Starting Flask Keep-Alive Server...")
 keep_alive()
 
 print("Checking Bot details from Telegram...")
-BOT_USERNAME = bot.get_me().username
-print(f"✅ Bot is Live as @{BOT_USERNAME}")
-bot.infinity_polling()
+try:
+    BOT_USERNAME = bot.get_me().username
+    print(f"✅ Bot is Live as @{BOT_USERNAME}")
+    bot.infinity_polling(timeout=10, long_polling_timeout=5)
+except Exception as e:
+    print(f"❌ Error starting bot: {e}")
+
