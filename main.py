@@ -81,9 +81,9 @@ V2BOX_PACKAGES = {
 def get_main_inline_keyboard():
     inline_markup = InlineKeyboardMarkup(row_width=2)
     btn_user_info = InlineKeyboardButton('👤 User Info', callback_data='user_info')
-    btn_refer = InlineKeyboardButton('🔗 Refer', callback_data='refer')
-    btn_gen_key = InlineKeyboardButton('🔑 Generate Key', callback_data='gen_key')
-    btn_buy_credits = InlineKeyboardButton('💰 Buy Credits', callback_data='buy_credits')
+    btn_refer = InlineKeyboardButton('🔗 ဖိတ်ခေါ် link ', callback_data='refer')
+    btn_gen_key = InlineKeyboardButton('🔑 Vpn Key ဝယ်ရန်', callback_data='gen_key')
+    btn_buy_credits = InlineKeyboardButton('💰 Coin ဝယ်ရန်', callback_data='buy_credits')
     btn_channel = InlineKeyboardButton('📢 Channel ↗', url='https://t.me/starlinkfreezone')
     
     inline_markup.add(btn_user_info, btn_refer)      
