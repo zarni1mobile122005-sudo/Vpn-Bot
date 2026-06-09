@@ -1,4 +1,4 @@
-import telebot
+
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 import time
 from threading import Thread
