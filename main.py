@@ -26,7 +26,9 @@ def load_config():
     if not os.path.exists('config.json'):
         default_config = {
             "TOKEN": "8724005419:AAH2HPdjlJ2ZcdzkLdMpcJWEaDuQhWg4ls4",
-            "ADMIN_LIST": [7592705124]
+            "ADMIN_LIST": [7592705124],
+            "CHANNEL_ID": "@starlinkfreezone",  # စစ်ဆေးမည့် Channel ၏ Username (သို့) ID
+            "CHANNEL_URL": "https://t.me/starlinkfreezone" # Channel Link
         }
         with open('config.json', 'w') as f:
             json.dump(default_config, f, indent=4)
@@ -36,7 +38,7 @@ def load_config():
 
 def save_config():
     with open('config.json', 'w') as f:
-        json.dump({"TOKEN": TOKEN, "ADMIN_LIST": ADMIN_LIST}, f, indent=4)
+        json.dump({"TOKEN": TOKEN, "ADMIN_LIST": ADMIN_LIST, "CHANNEL_ID": CHANNEL_ID, "CHANNEL_URL": CHANNEL_URL}, f, indent=4)
 
 def load_users():
     if not os.path.exists('database.json') or os.path.getsize('database.json') == 0:
@@ -63,6 +65,8 @@ def save_links():
 config = load_config()
 TOKEN = config["TOKEN"]
 ADMIN_LIST = config["ADMIN_LIST"]
+CHANNEL_ID = config.get("CHANNEL_ID", "@starlinkfreezone")
+CHANNEL_URL = config.get("CHANNEL_URL", "https://t.me/starlinkfreezone")
 
 bot = telebot.TeleBot(TOKEN)
 BOT_USERNAME = None
@@ -77,14 +81,44 @@ V2BOX_PACKAGES = {
     "100gb": 90
 }
 
-# --- ⌨️ KEYBOARDS (ဒုတိယ Code ရဲ့ Design အတိုင်း ပြင်ဆင်ထားသည်) ---
+# --- 🔒 FORCE JOIN CHECK FUNCTION ---
+def is_user_joined(user_id):
+    """ အသုံးပြုသူက Channel ထဲမှာ ရှိမရှိ စစ်ဆေးပေးမည့် Function """
+    if user_id in ADMIN_LIST: 
+        return True # Admin ဖြစ်ပါက စစ်ဆေးရန်မလိုဘဲ အလိုအလျောက် သုံးခွင့်ပေးမည်
+    try:
+        member = bot.get_chat_member(CHANNEL_ID, user_id)
+        # အကယ်၍ အခြေအနေက အဖွဲ့ဝင် ဖြစ်နေရင် True ပေးမယ်
+        if member.status in ['member', 'administrator', 'creator']:
+            return True
+        return False
+    except Exception as e:
+        # Bot က Channel ထဲမှာ Admin မဖြစ်သေးရင် သို့မဟုတ် ID မှားနေရင် လူတိုင်းကို ပေးသုံးလိုက်မည်
+        print(f"Force Join Error: {e}")
+        return True
+
+def send_force_join_message(chat_id):
+    """ Channel မဝင်ရသေးပါက ပြသမည့် စာသားနှင့် ခလုတ် """
+    markup = InlineKeyboardMarkup()
+    btn_join = InlineKeyboardButton("📢 Join Our Channel", url=CHANNEL_URL)
+    btn_check = InlineKeyboardButton("🔄 Joined (စစ်ဆေးမည်)", callback_data="check_join")
+    markup.add(btn_join)
+    markup.add(btn_check)
+    
+    text = (
+        "🚀 **ဤ Bot ကို အသုံးပြုနိုင်ရန်အတွက် ကျွန်တော်တို့၏ Channel ကို အရင် Join ပေးရပါမည်။**\n\n"
+        "အောက်ပါခလုတ်ကို နှိပ်ပြီး Channel ထဲဝင်ရောက်ပေးပါဗျာ။ ပြီးပါက 'Joined (စစ်ဆေးမည်)' ခလုတ်ကို နှိပ်ပါ။"
+    )
+    bot.send_message(chat_id, text, reply_markup=markup, parse_mode='Markdown')
+
+# --- ⌨️ KEYBOARDS ---
 def get_main_inline_keyboard():
     inline_markup = InlineKeyboardMarkup(row_width=2)
     btn_user_info = InlineKeyboardButton('👤 User Info', callback_data='user_info')
     btn_refer = InlineKeyboardButton('🔗 ဖိတ်ခေါ် link ', callback_data='refer')
     btn_gen_key = InlineKeyboardButton('🔑 Vpn Key ဝယ်ရန်', callback_data='gen_key')
     btn_buy_credits = InlineKeyboardButton('💰 Coin ဝယ်ရန်', callback_data='buy_credits')
-    btn_channel = InlineKeyboardButton('📢 Channel ↗', url='https://t.me/starlinkfreezone')
+    btn_channel = InlineKeyboardButton('📢 Channel ↗', url=CHANNEL_URL)
     
     inline_markup.add(btn_user_info, btn_refer)      
     inline_markup.add(btn_gen_key, btn_buy_credits)
@@ -145,6 +179,11 @@ def send_welcome(message):
                 except: pass
         except ValueError: pass
 
+    # Channel Join ထားခြင်း ရှိမရှိ စစ်ဆေးခြင်း
+    if not is_user_joined(chat_id):
+        send_force_join_message(chat_id)
+        return
+
     reply_markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     btn_how_to_use = KeyboardButton('📖 VPN အသုံးပြုနည်း')
     reply_markup.add(btn_how_to_use)
@@ -155,6 +194,9 @@ def send_welcome(message):
 
 @bot.message_handler(func=lambda message: message.text == '📖 VPN အသုံးပြုနည်း')
 def how_to_use_handler(message):
+    if not is_user_joined(message.chat.id):
+        send_force_join_message(message.chat.id)
+        return
     link_markup = InlineKeyboardMarkup()
     btn_link = InlineKeyboardButton('🔗 ဒီနေရာကို နှိပ်ပြီး အသုံးပြုနည်းကြည့်ရန်', url='https://t.me/starlinkfreezone/7')
     link_markup.add(btn_link)
@@ -169,17 +211,13 @@ def admin_commands_list(message):
         "━━━━━━━━━━━━━━━━━━━━\n"
         "👥 `/ul` - Bot အသုံးပြုနေသော User စာရင်းကြည့်ရန်။\n\n"
         "💰 `/coinadd <chat_id> <amount>` - User ထံ Coin ထည့်ပေးရန်။\n"
-        "_(အတိုကောက် `/ca <chat_id> <amount>` ဟုလည်း သုံးနိုင်သည်)_\n\n"
         "📉 `/coindelete <chat_id> <amount>` - User ထံမှ Coin နှုတ်ယူရန်။\n"
-        "_(အတိုကောက် `/cd <chat_id> <amount>` ဟုလည်း သုံးနိုင်သည်)_\n\n"
         "💰 `/pu <gb> <coins>` - Package ဈေးနှုန်း သတ်မှတ်/ပြင်ဆင်ရန်။\n"
         "❌ `/pu <gb> delete` - Package ကို ပြန်ဖျက်ရန်။\n\n"
-        "🔗 `/5gb <link>` , `/10gb <link>` စသဖြင့် VPN Link အသစ်ထည့်ရန်။\n\n"
+        "🔗 `/5gb <link>` , `/10gb <link>` စသဖြင့် VPN Link အသစ်ထည့်ရန်။\n"
         "🔥 `/deletelink <gb> <link>` - Stock ထဲမှ VPN Link အား ရှာဖွေဖျက်ထုတ်ရန်။\n"
-        "_(အတိုကောက် `/dl <gb> <link>` ဟုလည်း သုံးနိုင်သည်)_\n\n"
         "➕ `/addadmin <chat_id>` - Admin အသစ် ထပ်တိုးထည့်သွင်းရန်။\n"
-        "_(အတိုကောက် `/aa <chat_id>` ဟုလည်း သုံးနိုင်သည်)_\n\n"
-        "📊 `/gbl` - လက်ရှိ VPN Links လက်ကျန်စာရင်း ကြည့်ရန်။\n\n"
+        "📊 `/gbl` - လက်ရှိ VPN Links လက်ကျန်စာရင်း ကြည့်ရန်။\n"
         "📢 `/am <စာသား>` - User အားလုံးထံ စာတစ်ပြိုင်နက် ပို့ရန် (Broadcast)။\n"
         "━━━━━━━━━━━━━━━━━━━━"
     )
@@ -394,9 +432,32 @@ def admin_broadcast_message(message):
 # --- 🔄 CALLBACK QUERY LISTENERS ---
 @bot.callback_query_handler(func=lambda call: True)
 def callback_listener(call):
-    bot.answer_callback_query(call.id)
     chat_id = call.message.chat.id
     check_and_create_user(call.message)
+
+    # 🔄 'Joined' စစ်ဆေးသည့်ခလုတ်အားနှိပ်ပါက စစ်ဆေးပေးခြင်း
+    if call.data == "check_join":
+        if is_user_joined(chat_id):
+            bot.answer_callback_query(call.id, "✅ ကျေးဇူးတင်ပါသည်! Channel ဝင်ရောက်မှု အောင်မြင်ပါသည်။")
+            bot.delete_message(chat_id, call.message.message_id)
+            
+            reply_markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
+            btn_how_to_use = KeyboardButton('📖 VPN အသုံးပြုနည်း')
+            reply_markup.add(btn_how_to_use)
+            
+            bot.send_message(chat_id, "✨ Premium VPN Bot မှ ကြိုဆိုပါတယ်ဗျာ။\nအောက်ပါ ခလုတ်များကို အသုံးပြုနိုင်ပါတယ်-", reply_markup=reply_markup)
+            bot.send_message(chat_id, "👉 လိုအပ်ရာ လုပ်ဆောင်ချက်ကို နှိပ်ပါ -", reply_markup=get_main_inline_keyboard())
+        else:
+            bot.answer_callback_query(call.id, "❌ သင် Channel ထဲမဝင်ရသေးပါဗျာ။ အရင် Join ပေးပါ။", show_alert=True)
+        return
+
+    # တခြား ခလုတ်များကို မနှိပ်ခင် Channel Join မJoin အရင်စစ်မည်
+    if not is_user_joined(chat_id):
+        bot.answer_callback_query(call.id, "❌ Bot ကို သုံးနိုင်ရန် Channel ကို အရင် Join ပေးပါ။", show_alert=True)
+        send_force_join_message(chat_id)
+        return
+
+    bot.answer_callback_query(call.id)
     
     # 1. 👤 USER INFO
     if call.data == 'user_info':
@@ -457,7 +518,7 @@ def callback_listener(call):
         v2box_text = (
             "🚀 **V2BOX VPN Packages**\n"
             "━━━━━━━━━━━━━━━━━━━━\n"
-            "သင်ဝယ်ယူလိုသော GB ပမာဏကို ရွေးချယ်ပေးပါဗျာ。\n"
+            "သင်ဝယ်ယူလိုသော GB ပမာဏကို ရွေးချယ်ပေးပါဗျာ။\n"
             "သင့်အကောင့်ထဲတွင် လုံလောက်သော Coin ရှိရန် လိုအပ်ပါသည်။\n"
             "━━━━━━━━━━━━━━━━━━━━"
         )
